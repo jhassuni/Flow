@@ -4,7 +4,10 @@ sealed interface Endpoint {
     val host: String
 
     data object Proxy : Endpoint {
-        override val host: String = "flow-app.tech"
+        // flow-app.tech (the original maintainer's server) is dead. Point this at your own
+        // self-hosted proxy/ deployment's domain - see docker-compose.yml and PROXY_DOMAIN in
+        // .env. Must match the DNS name Caddy requests its certificate for.
+        override val host: String = "proxy.example.com"
     }
 
     sealed interface RutrackerEndpoint : Endpoint

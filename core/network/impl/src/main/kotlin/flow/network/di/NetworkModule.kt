@@ -6,9 +6,11 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.IntoSet
 import dagger.multibindings.Multibinds
 import flow.network.api.ImageLoader
 import flow.network.api.NetworkApi
+import flow.network.cloudflare.CloudflareInterceptor
 import flow.network.data.ImageLoaderFactoryImpl
 import flow.network.data.NetworkApiRepository
 import flow.network.data.NetworkApiRepositoryImpl
@@ -34,6 +36,10 @@ internal interface NetworkModule {
 
     @Multibinds
     fun interceptors(): Set<@JvmSuppressWildcards Interceptor>
+
+    @Binds
+    @IntoSet
+    fun cloudflareInterceptor(impl: CloudflareInterceptor): Interceptor
 
     @Binds
     @Singleton

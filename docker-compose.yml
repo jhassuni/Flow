@@ -1,0 +1,62 @@
+version: "3.8"
+
+# Self-hosted replacement for the dead flow-app.tech proxy.
+#
+# rutracker.org now runs a Cloudflare managed challenge in front of every endpoint except its
+# static index page (see core/network/impl/.../flow/network/cloudflare/CloudflareInterceptor.kt
+# for the on-device attempt at this, and why it can't fully work - Cloudflare ties a solved
+# challenge to the TLS fingerprint of the connection that solved it, which a plain HTTP client on
+# any platform can't reproduce). `flaresolverr` runs a real, remotely-driven Chromium browser to
+# solve it; `proxy` (this repo's proxy/ module) relays every rutracker.org call through it instead
+# of connecting directly - see proxy/src/main/kotlin/flow/proxy/rutracker/flaresolverr/. `caddy`
+# terminates HTTPS with an automatic Let's Encrypt certificate, since the Android app's Proxy
+# endpoint always connects over https://.
+#
+# Requires a domain's DNS A record already pointed at this host. Copy .env.example to .env and
+# fill in PROXY_DOMAIN before running `docker compose up -d`.
+services:
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    restart: unless-stopped
+    mem_limit: 1200m
+    environment:
+      - LOG_LEVEL=info
+    networks:
+      - internal
+
+  proxy:
+    build: ./proxy
+    restart: unless-stopped
+    mem_limit: 400m
+    environment:
+      - FLARESOLVERR_URL=http://flaresolverr:8191/v1
+      - JAVA_TOOL_OPTIONS=-Xmx256m
+    depends_on:
+      - flaresolverr
+    networks:
+      - internal
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    mem_limit: 100m
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - PROXY_DOMAIN=${PROXY_DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - proxy
+    networks:
+      - internal
+
+networks:
+  internal:
+
+volumes:
+  caddy_data:
+  caddy_config:

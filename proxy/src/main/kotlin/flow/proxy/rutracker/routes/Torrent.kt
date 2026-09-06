@@ -26,6 +26,14 @@ internal fun Application.configureTorrentRoutes() {
             )
         }
 
+        // KNOWN GAP: api.download() goes through RuTrackerInnerApiImpl -> the same
+        // FlareSolverrEngine-backed HttpClient as everything else (see api/HttpClientFactory.kt).
+        // dl.php returns a binary .torrent file with Content-Disposition: attachment, which a
+        // real browser hands off to its native download manager instead of rendering as a page -
+        // FlareSolverr has no page DOM to scrape in that case, so this will not return real
+        // torrent bytes until downloads get their own binary-capture path (e.g. a small
+        // Playwright/CDP script reading the raw response body) instead of going through
+        // FlareSolverr's page-scraping API.
         get("/download/{id}") {
             val (contentDisposition, contentType, bytes) = api.download(
                 token = call.request.authToken,
